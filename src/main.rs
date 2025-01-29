@@ -19,17 +19,15 @@ extern "system" fn service_control_handler(
     lpeventdata: *mut c_void,
     lpcontext: *mut c_void,
 ) -> u32 {
-    let mut service_status = unsafe { &_SERVICE_STATUS }.lock().unwrap();
-    let service_status_handle = *unsafe { &_SERVICE_STATUS_HANDLE }.lock().unwrap();
     unsafe {
         match dwcontrol {
-            SERVICE_CONTROL_SHUTDOWN => service_status.dwCurrentState = SERVICE_STOPPED,
-            SERVICE_CONTROL_STOP => service_status.dwCurrentState = SERVICE_STOPPED,
+            SERVICE_CONTROL_SHUTDOWN | SERVICE_CONTROL_STOP => {
+                _SERVICE_STATUS.dwCurrentState = SERVICE_STOPPED;
+            }
             _ => {}
         }
-        SetServiceStatus(service_status_handle, &mut *service_status).unwrap();
+        SetServiceStatus(_SERVICE_STATUS_HANDLE, &mut _SERVICE_STATUS).unwrap();
     }
-    drop(service_status);
     0
 }
 
@@ -40,11 +38,10 @@ unsafe extern "system" fn service_main(argc: u32, argv: *mut PWSTR) {
         None,
     ) {
         Ok(o) => {
-            *unsafe { &_SERVICE_STATUS_HANDLE }.lock().unwrap() = o;
-            let mut service_status = unsafe { &_SERVICE_STATUS }.lock().unwrap();
-            service_status.dwCurrentState = SERVICE_RUNNING;
-            SetServiceStatus(o, &mut *service_status).unwrap();
-            drop(service_status);
+            _SERVICE_STATUS_HANDLE = o;
+            _SERVICE_STATUS.dwCurrentState = SERVICE_RUNNING;
+            SetServiceStatus(o, &mut _SERVICE_STATUS).unwrap();
+            todo!()
         }
         Err(_) => {}
     }
